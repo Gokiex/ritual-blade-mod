@@ -21,7 +21,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -62,7 +61,8 @@ public final class RitualSequenceManager {
             site.participants().size(),
             cfg.particleCaps,
             cfg.liftTicks,
-            0
+            0,
+            cfg.restoreTimeAfter
         );
 
         ACTIVE.put(key, ritual);
@@ -102,17 +102,36 @@ public final class RitualSequenceManager {
     }
 
     private static boolean tickRitual(ServerWorld world, ActiveRitual ritual, RitualConfig cfg) {
-        int age = ritual.age();
-        float progress = MathHelper.clamp((float) age / (float) ritual.liftTicks(), 0.0F, 1.0F);
-        float eased = 1.0F - (1.0F - progress) * (1.0F - progress);
+        if (!ritual.restorePhase()) {
+            int age = ritual.age();
+            float progress = MathHelper.clamp((float) age / (float) ritual.liftTicks(), 0.0F, 1.0F);
+            float eased = 1.0F - (1.0F - progress) * (1.0F - progress);
 
-        forceDustPowered(world, ritual);
-        tickSword(ritual, eased);
-        tickTime(world, ritual, cfg, progress);
-        tickParticles(world, ritual, progress);
+            forceDustPowered(world, ritual);
+            tickSword(ritual, eased);
+            tickTimeTowardNight(world, ritual, cfg, progress);
+            tickParticles(world, ritual, progress);
 
-        if (age >= ritual.liftTicks()) {
-            endRitual(world, ritual, cfg);
+            if (age >= ritual.liftTicks()) {
+                finishLift(world, ritual, cfg);
+                if (cfg.timeFadeEnabled && ritual.shouldRestoreTime()) {
+                    ritual.setRestorePhase(true);
+                    ritual.setAge(0);
+                    return false;
+                }
+                return true;
+            }
+
+            ritual.incrementAge();
+            return false;
+        }
+
+        int restoreAge = ritual.age();
+        float restoreProgress = MathHelper.clamp((float) restoreAge / (float) ritual.liftTicks(), 0.0F, 1.0F);
+        tickTimeRestore(world, ritual, restoreProgress);
+
+        if (restoreAge >= ritual.liftTicks()) {
+            world.setTimeOfDay(ritual.originalTime());
             return true;
         }
 
@@ -137,7 +156,7 @@ public final class RitualSequenceManager {
         sword.setPosition(x, y, z);
     }
 
-    private static void tickTime(ServerWorld world, ActiveRitual ritual, RitualConfig cfg, float progress) {
+    private static void tickTimeTowardNight(ServerWorld world, ActiveRitual ritual, RitualConfig cfg, float progress) {
         if (!cfg.timeFadeEnabled) {
             return;
         }
@@ -146,6 +165,12 @@ public final class RitualSequenceManager {
         long start = ritual.originalTime();
         long next = (long) MathHelper.lerp(progress, (float) start, (float) targetNight);
         world.setTimeOfDay(next);
+    }
+
+    private static void tickTimeRestore(ServerWorld world, ActiveRitual ritual, float progress) {
+        long targetNight = 18000L;
+        long restored = (long) MathHelper.lerp(progress, (float) targetNight, (float) ritual.originalTime());
+        world.setTimeOfDay(restored);
     }
 
     private static void forceDustPowered(ServerWorld world, ActiveRitual ritual) {
@@ -189,7 +214,7 @@ public final class RitualSequenceManager {
         }
     }
 
-    private static void endRitual(ServerWorld world, ActiveRitual ritual, RitualConfig cfg) {
+    private static void finishLift(ServerWorld world, ActiveRitual ritual, RitualConfig cfg) {
         restoreDust(world, ritual);
 
         Vec3d swordPos = ritual.sword().getPos();
@@ -218,10 +243,6 @@ public final class RitualSequenceManager {
             ritual.sword().setNoGravity(false);
             ritual.sword().setPickupDelay(40);
             ritual.sword().setInvulnerable(false);
-        }
-
-        if (cfg.timeFadeEnabled && cfg.restoreTimeAfter) {
-            world.setTimeOfDay(ritual.originalTime());
         }
     }
 
@@ -292,7 +313,9 @@ public final class RitualSequenceManager {
         private final int participantCount;
         private final int particleCap;
         private final int liftTicks;
+        private final boolean shouldRestoreTime;
         private int age;
+        private boolean restorePhase;
 
         private ActiveRitual(
             RitualKey key,
@@ -305,7 +328,8 @@ public final class RitualSequenceManager {
             int participantCount,
             int particleCap,
             int liftTicks,
-            int age
+            int age,
+            boolean shouldRestoreTime
         ) {
             this.key = key;
             this.site = site;
@@ -318,6 +342,8 @@ public final class RitualSequenceManager {
             this.particleCap = particleCap;
             this.liftTicks = liftTicks;
             this.age = age;
+            this.shouldRestoreTime = shouldRestoreTime;
+            this.restorePhase = false;
         }
 
         public RitualKey key() {
@@ -360,12 +386,28 @@ public final class RitualSequenceManager {
             return liftTicks;
         }
 
+        public boolean shouldRestoreTime() {
+            return shouldRestoreTime;
+        }
+
         public int age() {
             return age;
         }
 
+        public void setAge(int age) {
+            this.age = age;
+        }
+
         public void incrementAge() {
             this.age++;
+        }
+
+        public boolean restorePhase() {
+            return restorePhase;
+        }
+
+        public void setRestorePhase(boolean restorePhase) {
+            this.restorePhase = restorePhase;
         }
     }
 }
