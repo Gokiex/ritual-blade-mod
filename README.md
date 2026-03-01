@@ -8,10 +8,10 @@ This project targets:
 - Minecraft `1.21.11`
 - Fabric Loader stable
 - Fabric API for `1.21.11`
-- Fabric Loom `1.14.10`
+- Fabric Loom `1.14`
 - Java 21+
 
-> Note: Loom 1.14.10 requires a Gradle version compatible with plugin API 9.x (for example Gradle 9.2.x).
+> Note: Loom 1.14 requires a Gradle version compatible with plugin API 9.x (for example Gradle 9.2.x).
 
 ## Command
 
