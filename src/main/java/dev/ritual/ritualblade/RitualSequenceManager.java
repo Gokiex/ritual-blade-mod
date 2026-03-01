@@ -24,7 +24,6 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Vector3f;
 
 /**
  * Tick-driven active ritual orchestration.
@@ -197,7 +196,7 @@ public final class RitualSequenceManager {
                 double t = (i + world.random.nextDouble()) / perTick;
                 Vec3d point = chestCenter.lerp(swordPos, t);
                 sendParticleToNearby(world, ParticleTypes.SMOKE, point, Vec3d.ZERO);
-                sendParticleToNearby(world, new DustParticleEffect(new Vector3f(0.75F, 0.02F, 0.02F), 1.0F), point,
+                sendParticleToNearby(world, new DustParticleEffect(0xBF0505, 1.0F), point,
                     new Vec3d(0.0, 0.005, 0.0));
             }
         }
