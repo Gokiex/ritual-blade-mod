@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "ritualblademod",
+  "version": "${version}",
+  "name": "Ritual Blade Mod",
+  "description": "Server-side ritual test command with vanilla-style VFX.",
+  "authors": ["Codex"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.ritual.ritualblade.RitualBladeMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
