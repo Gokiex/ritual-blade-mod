@@ -1,7 +1,6 @@
 package dev.ritual.ritualblade;
 
 import com.mojang.brigadier.CommandDispatcher;
-import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -17,7 +16,7 @@ public final class TestRitualCommand {
 
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("test")
-            .requires(source -> source.hasPermissionLevel(2))
+            .requires(source -> source.hasPermission(2))
             .executes(context -> execute(context.getSource())));
     }
 
@@ -30,7 +29,7 @@ public final class TestRitualCommand {
         ServerWorld world = source.getWorld();
         RitualConfig cfg = RitualConfigHolder.get();
 
-        var maybeSite = RitualFinder.findClosestActivated(world, executor.getPos(), cfg.searchRadius);
+        var maybeSite = RitualFinder.findClosestActivated(world, executor.getPosition(), cfg.searchRadius);
         if (maybeSite.isEmpty()) {
             source.sendError(Text.literal("No activated ritual table found in range."));
             return 0;
